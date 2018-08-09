@@ -1,0 +1,36 @@
+Source: atarashi
+Maintainer: Aman Jain <amanjain5221@gmail.com>
+Section: python
+Priority: optional
+Build-Depends: python3-setuptools, python3-all, python-pip, debhelper (>= 7.4.3)
+Standards-Version: 3.9.1
+
+
+
+
+
+Package: python3-atarashi
+Architecture: all
+Depends: ${misc:Depends}, python-pip
+Description: An intelligent license scanner.
+ # Atarashi
+ New License Scanner Project Which Should be Integrated with FOSSology but also Work Independently.
+ .
+ ### Requirements
+ - Python v3.x
+ - pip
+ .
+ ## Steps for Installation
+ ### Build (optional)
+ - `$ python setup.py build`
+ - Build will generate 3 new files in your current directory
+     1.  `data/Ngram_keywords.json`
+     2.  `licenses/<SPDX-version>.csv`
+     3.  `licenses/processedList.csv`
+ - These files will be placed to their appropriate places by the install script.
+ ### Install
+ - `# python setup.py install`
+ - In install folder, make the "atarashi-install.sh" executable
+ - Run <./atarashi-install.sh>
+ - pip install -r <pathto/requirements.txt>
+

@@ -88,7 +88,8 @@ requirements = [
   'scikit-learn>=0.18.1',
   'scipy>=0.18.1',
   'textdistance>=3.0.3',
-  'setuptools>=39.2.0']
+  'setuptools>=20.7.0',
+  'code_comment>=0.1.0']
 
 setup(
   name = "atarashi",

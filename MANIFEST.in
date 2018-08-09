@@ -7,8 +7,9 @@ exclude *.git*
 exclude *.sh
 exclude *imtihaan.py
 
-include requirements*.*
+include requirements.txt
 include *.py
+include LICENSE
 
 prune .git
 prune venv

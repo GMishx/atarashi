@@ -1,0 +1,4 @@
+extend-diff-ignore="\.egg-info$"
+extend-diff-ignore="\.project$"
+extend-diff-ignore="\.settings*"
+extend-diff-ignore="\.pydevproject$"
