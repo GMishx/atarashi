@@ -79,7 +79,7 @@ $ python3 setup.py --command-packages=stdeb.command bdist_deb
 ```
 - Locate the files under `deb_dist`
 
-## How to generate the documentation using sphinx
+## How to generate the documentation manually using sphinx
 
 1. Go to project directory 'atarashi'.
 2. Install Sphinx and m2r `pip install sphinx m2r` (Since this project is based on python so `pip` is already installed).
@@ -134,7 +134,29 @@ $ python3 setup.py --command-packages=stdeb.command bdist_deb
 
 This will generate file in `docs/_build/html`. Go to: index.html
 
-You can change the theme of the documentation by changing `html_theme` in config.py file in `docs/` folder.
+## How to generate the documentation using setuptools
+1. Build atarashi (or install sphinx using `pip install sphinx m2r`)
+
+    ```bash
+    python3 setup.py build
+    ```
+2. Refresh source `.rst` files
+
+    ```bash
+    sphinx-apidoc -Pe -o source/ ../atarashi
+    ```
+3. Check for new modules files (if any) and add `:private-members:` under your new `.. automodule::`.
+4. Generate the docs
+
+    ```bash
+    python3 setup.py build_sphinx
+    ```
+5. Check `python3 setup.py build_sphinx --help` for more.
+
+You will get the files under `build/sphinx/html`.
+
+You can change the theme of the documentation by changing `html_theme` in `docs/config.py` file.
 You can choose from {'alabaster', 'classic', 'sphinxdoc', 'scrolls', 'agogo', 'traditional', 'nature', 'haiku', 'pyramid', 'bizstyle'}
 
-[Reference](http://www.sphinx-doc.org/en/master/theming.html)  
+[Reference](http://www.sphinx-doc.org/en/master/theming.html)
+
