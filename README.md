@@ -1,4 +1,5 @@
 # Atarashi
+[![Known Vulnerabilities](https://snyk.io/test/github/GMishx/atarashi/badge.svg?targetFile=requirements.txt)](https://snyk.io/test/github/GMishx/atarashi?targetFile=requirements.txt)
 This is a Google Summer of Code Project.  
 New License Scanner Project Which Should be Integrated with FOSSology but also Work Independently.
 
