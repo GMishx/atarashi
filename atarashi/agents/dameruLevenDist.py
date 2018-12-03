@@ -20,11 +20,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import argparse
+from pyxdameraulevenshtein import damerau_levenshtein_distance
 import sys
 
-from pyxdameraulevenshtein import damerau_levenshtein_distance
+from atarashi.agents.atarashiAgent import AtarashiAgent
 
-from atarashi.agents.atarashiAgent import AtarashiAgent, exactMatcher
 
 __author__ = "Aman Jain"
 __email__ = "amanjain5221@gmail.com"
@@ -43,7 +43,7 @@ class DameruLevenDist(AtarashiAgent):
     '''
     processedData = super().loadFile(filePath)
 
-    temp = exactMatcher(processedData, self.licenseList)
+    temp = self.exactMatcher(processedData)
     if temp == -1:
       # Classify the license with minimum distance with scanned file
       globalDistance = sys.maxsize

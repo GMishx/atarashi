@@ -23,6 +23,9 @@ __author__ = "Gaurav Mishra"
 __email__ = "gmishx@gmail.com"
 
 from abc import ABCMeta, abstractmethod
+from functools import partial
+from multiprocessing import Pool as ThreadPool
+import os
 
 from atarashi.libs.commentPreprocessor import CommentPreprocessor
 from atarashi.license.licenseLoader import LicenseLoader
@@ -39,6 +42,8 @@ class AtarashiAgent(object):
     if 'processed_text' not in self.licenseList.columns:
       raise ValueError('The license list does not contain processed_text column.')
     self.verbose = verbose
+    self.threads = os.cpu_count() * 2
+    self.exactMatchData = [[x.shortname, x.processed_text] for x in self.licenseList.itertuples(False)]
 
   def loadFile(self, filePath):
     self.commentFile = CommentPreprocessor.extract(filePath)
@@ -56,20 +61,34 @@ class AtarashiAgent(object):
   def scan(self, filePath):
     pass
 
+  def exactMatcher(self, licenseText):
+    '''
+    :param licenseText: Processed and extracted input text
+    :return: License short name if exact match is found else -1 if no match
+    '''
+    output = []
 
-def exactMatcher(licenseText, licenses):
-  '''
-  :param licenseText: Processed and extracted input text
-  :param licenses: Processed licenses pandas data frame
-  :return: License short name if exact match is found else -1 if no match
-  '''
-  output = []
-  if 'processed_text' not in licenses.columns:
-    raise ValueError('The license list does not contain processed_text column.')
+    with ThreadPool(self.threads) as pool:
+      func = partial(self.__matchExactLicenseText, licenseText)
+      for match in pool.imap(func,
+                             self.exactMatchData,
+                             int(len(self.exactMatchData)/self.threads)):
+        if match is not None:
+          output.append(match)
 
-  for idx in range(len(licenses)):
-    if licenses.iloc[idx]['processed_text'] in licenseText and licenses.iloc[idx]['shortname'] != 'Void':
-      output.append(licenses.iloc[idx]['shortname'])
-  if not output:
-    return -1
-  return output
+    if not output:
+      return -1
+    return output
+
+  def __matchExactLicenseText(self, licenseText, licenseRow):
+    '''
+    Helper function for exactMatcher to check if licenseText exists in
+    processed_text of given licenseRow.
+    :param licenseText: Text to check
+    :param licenseRow: List of [shortname, processed_text]
+    :return: License shortname if found, None otherwise
+    '''
+    if licenseRow[0] !=  'Void' and licenseRow[1] in licenseText:
+      return licenseRow[0]
+    else:
+      return None

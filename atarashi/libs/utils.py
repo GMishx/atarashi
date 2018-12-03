@@ -53,10 +53,7 @@ def wordFrequency(data):
   :param data: Processed and Extracted text from the input file
   :return: Word frequency Dictionary
   '''
-  frequency = Counter()
-  for word in data:
-    frequency[word] += 1
-  return frequency
+  return Counter(data)
 
 
 def l2_norm(a):

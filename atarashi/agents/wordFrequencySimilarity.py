@@ -23,13 +23,34 @@ __author__ = "Aman Jain"
 __email__ = "amanjain5221@gmail.com"
 
 import argparse
+from multiprocessing import Pool as ThreadPool
 import re
 
-from atarashi.agents.atarashiAgent import AtarashiAgent, exactMatcher
+from atarashi.agents.atarashiAgent import AtarashiAgent
 from atarashi.libs.utils import wordFrequency
 
 
 class WordFrequencySimilarity(AtarashiAgent):
+
+  def __init__(self, licenseList, verbose=0):
+    super(WordFrequencySimilarity, self).__init__(licenseList, verbose)
+    # create array of frequency array of licenses
+    self.licensesFrequency = []
+    with ThreadPool(self.threads) as pool:
+      processedList = [x.processed_text for x in self.licenseList.itertuples(False)]
+      for frequency in pool.imap(self.__getFrequency,
+                                 processedList,
+                                 int(len(processedList)/self.threads)):
+          self.licensesFrequency.append(frequency)
+
+  def __getFrequency(self, processedData):
+    '''
+    Get word frequency for given string.
+
+    :param processedData: String to be processed.
+    :return: Word frequency Dictionary.
+    '''
+    return wordFrequency(re.findall(r'\b[a-z]{3,15}\b', processedData))
 
   def scan(self, filePath):
     '''
@@ -43,29 +64,24 @@ class WordFrequencySimilarity(AtarashiAgent):
       print("PROCESSED DATA IS ", processedData)
       print("LICENSES[0]", str(self.licenseList.iloc[0]))
 
-    temp = exactMatcher(processedData, self.licenseList)
+    temp = self.exactMatcher(processedData)
     if temp == -1:
-      # create array of frequency array of licenses
-      licensesFrequency = []
-      for idx in range(len(self.licenseList)):
-        license = self.licenseList.at[idx, 'processed_text']
-        licensesFrequency.append(wordFrequency(re.findall(r'\b[a-z]{3,15}\b', license)))
-
-      processedLicense = wordFrequency(re.findall(r'\b[a-z]{3,15}\b', processedData))
+      processedText = self.__getFrequency(processedData)
 
       if self.verbose > 0:
-        print("Frequency array of licenses", licensesFrequency[0])
-        print("Frequency table of input data", processedLicense)
+        print("Frequency array of licenses", self.licensesFrequency[0])
+        print("Frequency table of input data", processedText)
 
       # Histogram Similarity Algorithm
       globalCount = 0
       result = 0
-      for idx in range(len(licensesFrequency)):
+      for idx in range(len(self.licensesFrequency)):
         tempCount = 0
-        for word, processedLicenseWordFreq in processedLicense.items():
-          licenseWordFreq = licensesFrequency[idx].get(word, 0)
-          if min(licenseWordFreq, processedLicenseWordFreq) > 0:
-            tempCount = tempCount + min(licenseWordFreq, processedLicenseWordFreq)
+        for word, processedLicenseWordFreq in processedText.items():
+          licenseWordFreq = self.licensesFrequency[idx].get(word, 0)
+          minVal = min(licenseWordFreq, processedLicenseWordFreq)
+          if minVal > 0:
+            tempCount = tempCount + minVal
         if self.verbose > 0:
           print(idx, self.licenseList.at[idx, 'shortname'], tempCount)
         if globalCount < tempCount:
