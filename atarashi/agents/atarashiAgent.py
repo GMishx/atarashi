@@ -43,7 +43,9 @@ class AtarashiAgent(object):
       raise ValueError('The license list does not contain processed_text column.')
     self.verbose = verbose
     self.threads = os.cpu_count() * 2
-    self.exactMatchData = [[x.shortname, x.processed_text] for x in self.licenseList.itertuples(False)]
+    self.processedTextList = [
+      {'shortname': x.shortname,
+       'processed_text': x.processed_text} for x in self.licenseList.itertuples(False)]
 
   def loadFile(self, filePath):
     self.commentFile = CommentPreprocessor.extract(filePath)
@@ -71,8 +73,8 @@ class AtarashiAgent(object):
     with ThreadPool(self.threads) as pool:
       func = partial(self.__matchExactLicenseText, licenseText)
       for match in pool.imap(func,
-                             self.exactMatchData,
-                             int(len(self.exactMatchData)/self.threads)):
+                             self.processedTextList,
+                             int(len(self.processedTextList)/self.threads)):
         if match is not None:
           output.append(match)
 
@@ -85,10 +87,10 @@ class AtarashiAgent(object):
     Helper function for exactMatcher to check if licenseText exists in
     processed_text of given licenseRow.
     :param licenseText: Text to check
-    :param licenseRow: List of [shortname, processed_text]
+    :param licenseRow: Dictionary of {shortname, processed_text}
     :return: License shortname if found, None otherwise
     '''
-    if licenseRow[0] !=  'Void' and licenseRow[1] in licenseText:
+    if licenseRow['shortname'] !=  'Void' and licenseRow['processed_text'] in licenseText:
       return licenseRow[0]
     else:
       return None

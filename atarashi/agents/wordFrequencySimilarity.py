@@ -37,7 +37,7 @@ class WordFrequencySimilarity(AtarashiAgent):
     # create array of frequency array of licenses
     self.licensesFrequency = []
     with ThreadPool(self.threads) as pool:
-      processedList = [x.processed_text for x in self.licenseList.itertuples(False)]
+      processedList = [x['processed_text'] for x in self.processedTextList]
       for frequency in pool.imap(self.__getFrequency,
                                  processedList,
                                  int(len(processedList)/self.threads)):

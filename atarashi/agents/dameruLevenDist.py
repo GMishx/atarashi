@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import argparse
+from functools import partial
+from multiprocessing import Pool as ThreadPool
 from pyxdameraulevenshtein import damerau_levenshtein_distance
 import sys
 
@@ -46,20 +48,34 @@ class DameruLevenDist(AtarashiAgent):
     temp = self.exactMatcher(processedData)
     if temp == -1:
       # Classify the license with minimum distance with scanned file
-      globalDistance = sys.maxsize
-      result = 0
-      for idx in range(len(self.licenseList)):
-        distance = damerau_levenshtein_distance(processedData.split(" "),
-                                                self.licenseList.iloc[idx]['processed_text'].split(" "))
-        if self.verbose > 0:
-          print(str(idx) + "  " + self.licenseList.iloc[idx]['shortname'] + "  " + str(distance))
-        if distance < globalDistance:
-          globalDistance = distance
-          result = idx
+      distances = []
+      result = None
+      with ThreadPool(self.threads) as pool:
+        func = partial(self.__dldDistance, processedData.split(" "))
+        for shortname, distance in pool.imap(func,
+                                 self.processedTextList,
+                                 int(len(self.processedTextList)/self.threads)):
+          if self.verbose > 0:
+            print("%s %s" %(shortname,str(distance)))
+          distances.append({'shortname':shortname, 'distance':distance})
+      result = min(distances, key=lambda x:x['distance'])
 
-      return str(self.licenseList.iloc[result]['shortname'])
+      return result['shortname']
     else:
       return temp[0]
+
+  def __dldDistance(self, textList, licenseData):
+    '''
+    Helper function to call damerau_levenshtein_distance.
+
+    :param textList: Processed file data already splitted with spaces.
+    :param licenseData: Dictionary of {shortname, processed_text}
+    :return: The shortname of the license processed and DLD value.
+    '''
+    distance = damerau_levenshtein_distance(textList,
+                                            licenseData['processed_text'].split(" "))
+    shortname = licenseData['shortname']
+    return (shortname, distance)
 
 
 if __name__ == "__main__":
