@@ -18,21 +18,23 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 """
-
-__author__ = "Aman Jain"
-__email__ = "amanjain5221@gmail.com"
-
 import argparse
 from enum import Enum
+from functools import partial
 import itertools
+from multiprocessing import Pool as ThreadPool
+from numpy import unique, sum, dot
 import time
 
-from numpy import unique, sum, dot
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from atarashi.agents.atarashiAgent import AtarashiAgent
 from atarashi.libs.initialmatch import initial_match
 from atarashi.libs.utils import l2_norm
+
+
+__author__ = "Aman Jain"
+__email__ = "amanjain5221@gmail.com"
 
 
 def tokenize(data): return data.split(" ")
@@ -44,11 +46,12 @@ class TFIDF(AtarashiAgent):
     scoreSim = 1
     cosineSim = 2
 
-  def __init__(self, licenseList, algo=TfidfAlgo.cosineSim):
-    super().__init__(licenseList)
+  def __init__(self, licenseList, verbose=0, algo=TfidfAlgo.cosineSim):
+    super(TFIDF, self).__init__(licenseList, verbose)
     self.algo = algo
 
-  def __cosine_similarity(self, a, b):
+  @staticmethod
+  def __cosine_similarity(a, b):
     '''
     https://blog.nishtahir.com/2015/09/19/fuzzy-string-matching-using-cosine-similarity/
 
@@ -61,6 +64,23 @@ class TFIDF(AtarashiAgent):
     else:
       return dot_product / temp
 
+  def _sumscore_helper(self, tfresult):
+    '''
+    Helper function to get sum score for TFIDF.
+    :param tfresult: Single result from `fit_transform` with index.
+    :return: Index, sum score.
+    '''
+    return tfresult[0], sum(tfresult[1])
+
+  def _cosinescore_helper(self, tfarray, tfresult):
+    '''
+    Helper function to get cosine sim score for TFIDF.
+    :param tfarray: All result array from `fit_transform`.
+    :param tfresult: Single result from `fit_transform` with index.
+    :return: Index, cosine sim score.
+    '''
+    return tfresult[0], TFIDF.__cosine_similarity(tfresult[1], tfarray[-1])
+
   def __tfidfsumscore(self, inputFile):
     '''
     TF-IDF Sum Score Algorithm. Used TfidfVectorizer to implement it.
@@ -69,7 +89,7 @@ class TFIDF(AtarashiAgent):
     :return: Sorted array of JSON of scanner results with sim_type as __tfidfsumscore
     '''
     processedData1 = super().loadFile(inputFile)
-    matches = initial_match(self.commentFile, processedData1, self.licenseList)
+    matches = initial_match(self.commentFile, processedData1, self.processedTextList)
 
     startTime = time.time()
 
@@ -85,16 +105,17 @@ class TFIDF(AtarashiAgent):
     sklearn_representation = sklearn_tfidf.fit_transform(all_documents)
 
     score_arr = []
-    result = 0
-    for counter, value in enumerate(sklearn_representation.toarray()[:len(sklearn_representation.toarray()) - 1],
-                                    start=0):
-      sim_score = sum(value)
-      score_arr.append({
-        'shortname': self.licenseList.iloc[result]['shortname'],
-        'sim_type': "Sum of TF-IDF score",
-        'sim_score': sim_score,
-        'desc': "Score can be greater than 1 also"
-      })
+    with ThreadPool(self.threads) as pool:
+      tfarray = sklearn_representation.toarray()
+      for index, score in pool.imap(self._sumscore_helper,
+                                    enumerate(tfarray[:-1], start=0),
+                                    int((len(tfarray) - 1)/self.threads)):
+        score_arr.append({
+          'shortname': self.licenseList.iloc[index]['shortname'],
+          'sim_type': "Sum of TF-IDF score",
+          'sim_score': score,
+          'desc': "Score can be greater than 1 also"
+        })
     score_arr.sort(key=lambda x: x['sim_score'], reverse=True)
     matches = list(itertools.chain(matches, score_arr[:5]))
     matches.sort(key=lambda x: x['sim_score'], reverse=True)
@@ -110,26 +131,30 @@ class TFIDF(AtarashiAgent):
     :return: Sorted array of JSON of scanner results with sim_type as __tfidfcosinesim
     '''
     processedData1 = super().loadFile(inputFile)
-    matches = initial_match(self.commentFile, processedData1, self.licenseList)
+    matches = initial_match(self.commentFile, processedData1, self.processedTextList)
 
     startTime = time.time()
 
     all_documents = self.licenseList['processed_text'].tolist()
     all_documents.append(processedData1)
-    sklearn_tfidf = TfidfVectorizer(min_df=0, use_idf=True, smooth_idf=True, sublinear_tf=True, tokenizer=tokenize)
+    sklearn_tfidf = TfidfVectorizer(min_df=0, use_idf=True, smooth_idf=True,
+                                    sublinear_tf=True, tokenizer=tokenize)
 
     sklearn_representation = sklearn_tfidf.fit_transform(all_documents)
 
-    for counter, value in enumerate(sklearn_representation.toarray()[:len(sklearn_representation.toarray()) - 1],
-                                    start=0):
-      sim_score = self.__cosine_similarity(value, sklearn_representation.toarray()[-1])
-      if sim_score >= 0.8:
-        matches.append({
-          'shortname': self.licenseList.iloc[counter]['shortname'],
-          'sim_type': "TF-IDF Cosine Sim",
-          'sim_score': sim_score,
-          'desc': ''
-        })
+    with ThreadPool(self.threads) as pool:
+      tfarray = sklearn_representation.toarray()
+      func = partial(self._cosinescore_helper, tfarray)
+      for index, score in pool.imap(func,
+                                    enumerate(tfarray[:-1], start=0),
+                                    int((len(tfarray) - 1)/self.threads)):
+        if score >= 0.8:
+          matches.append({
+            'shortname': self.licenseList.iloc[index]['shortname'],
+            'sim_type': "TF-IDF Cosine Sim",
+            'sim_score': score,
+            'desc': ''
+          })
     matches.sort(key=lambda x: x['sim_score'], reverse=True)
     if self.verbose > 0:
       print("time taken is " + str(time.time() - startTime) + " sec")

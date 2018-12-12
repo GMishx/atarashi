@@ -45,7 +45,8 @@ class AtarashiAgent(object):
     self.threads = os.cpu_count() * 2
     self.processedTextList = [
       {'shortname': x.shortname,
-       'processed_text': x.processed_text} for x in self.licenseList.itertuples(False)]
+       'processed_text': x.processed_text,
+       'processed_header': x.processed_header} for x in self.licenseList.itertuples(False)]
 
   def loadFile(self, filePath):
     self.commentFile = CommentPreprocessor.extract(filePath)
