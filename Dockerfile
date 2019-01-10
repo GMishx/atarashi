@@ -18,13 +18,17 @@
 #
 # Description: Docker container image recipe
 
-FROM python:3-slim
+FROM python:3-alpine
 
 LABEL maintainer="Fossology <fossology@fossology.org>"
 LABEL Description="Image for Atarashi project"
 COPY . .
 
-RUN apt-get update -q && apt-get install -q -y git gcc
+#RUN apk add --update bash curl
+#RUN apk add gcc make linux-headers musl-dev openldap-dev libxml2-dev libxslt-dev
+#RUN apk add libffi-dev pcre-dev cython
+RUN apk add --update py-pip gcc make git cython
+RUN apk add subversion lapack-dev musl-dev
 
 RUN python3 setup.py install
 
